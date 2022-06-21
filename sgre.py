@@ -8,9 +8,10 @@ from os.path import isfile, join
 import glob
 import string
 import random
+import shutil
 from datetime import datetime
 from HeaderFormat import header_format
-from ProtectSheet import lock_only_header
+
 
 
 def create_password():
@@ -43,11 +44,11 @@ def create_output_folders(today):
     path_xl_files = f'{path}{folder_xl_files}\\'
     path_xl_files_password = f'{path}{folder_xl_files_password}\\'
     
-    try:
-        os.mkdir(folder_xl_files)
-        os.mkdir(folder_xl_files_password)
-    except FileExistsError:
-        pass
+    os.system(f'rm -r {folder_xl_files}')
+    os.system(f'rm -r {folder_xl_files_password}')
+    
+    os.mkdir(folder_xl_files)
+    os.mkdir(folder_xl_files_password)
 
     return path_xl_files, path_xl_files_password
 
@@ -58,7 +59,7 @@ def sort_df_passwords(df, today):
     df['col_'] = [supp.upper() for supp in df['Supplier']]
     df.sort_values(by='col_', inplace=True)
     df = df.drop(columns=['col_'])
-    df.to_excel(f'{today} - Siemens_passwords.xlsx', index=False)
+    df.to_excel(f'{today} - {project_name}_passwords.xlsx', index=False)
 
 
 def column_width(ws, df, width_format=None):
@@ -91,9 +92,8 @@ def set_data_validation(ws, df, data_val_row, initial_index):
             ws.data_validation(f'{col_letter}{initial_index+1}:{col_letter}{length}', {'validate':'list', 'source':data_validation, 'error_type':'warning'})
 
 
-def start():
+def start(today):
 
-    today = datetime.today().strftime('%Y%m%d')
     path_xl_files, path_xl_files_password = create_output_folders(today)
     
     df = pd.read_excel(path+file, sheet_name='temp', header=None, na_filter=False)
@@ -111,6 +111,9 @@ def start():
     #     df[d_col] = df[d_col].dt.strftime('%d/%m/%Y')
     #     print(df[d_col])
 
+    width = df.shape[1]
+    last_column_letter = xlsxwriter.utility.xl_col_to_name(width-1)
+
 
     suppliers = set(df[9])
     print(suppliers)
@@ -120,37 +123,41 @@ def start():
     password_master = []
     for i, supp in enumerate(suppliers,1):
         name = ''.join(char for char in supp if char == ' ' or char.isalnum())
-        df_supp = df[df['Supplier']==supp]
+        df_supp = df[df[9]==supp]
         id_file = f'{project_name}ID{batch}{i:03d}'
         file_name = f'{project_name} Worker data collection-{id_file}-{name}-{today}.xlsx'
 
         df_supp = pd.concat([df_header, df_supp], axis=0)
+        # print(df_supp.head(10))
+        # a = input('c? ')
+        # if a == 'f':
+        #     return 'dd'
         
         with pd.ExcelWriter(f'{path_xl_files}{file_name}', engine='xlsxwriter') as writer:
-            df_supp.to_excel(writer, sheet_name='Sheet1', index=False) 
+            df_supp.to_excel(writer, sheet_name='Sheet1', index=False, header=False) 
 
             wb = writer.book
             ws = writer.sheets['Sheet1']
 
-            header_format(wb, ws, df, format_header_row, header_index=2, example_hd_index=1, example_hd_format='italic_wrap')
+            header_format(wb, ws, df_supp, format_header_row, header_index=2, example_hd_index=1, example_hd_format='italic_wrap')
             set_data_validation(ws, df_supp, data_val_row, initial_index)
 
-            column_width(ws, df, width_format)
+            column_width(ws, df_supp, width_format)
 
-            merge_format1 = wb.add_format({'bg_color': '#D8E4BC', 'bold':1, 'font_color':'#000000'}) 
-            merge_format2 = wb.add_format({'bg_color': '#FCD5B4', 'bold':1, 'font_color':'#000000'}) 
+            merge_format1 = wb.add_format({'bg_color': '#D8E4BC', 'bold':1, 'align': 'center', 'font_color':'#000000'}) 
+            merge_format2 = wb.add_format({'bg_color': '#FCD5B4', 'bold':1, 'align': 'center', 'font_color':'#000000'}) 
             ws.merge_range('AF1:AH1', 'Please fill if Booking Entity belongs to the UK', merge_format1)
             ws.merge_range('AI1:AU1', 'Please fill if Booking Entity belongs to the UK', merge_format2)
             
-            lock_only_header(wb, ws, df, initial_index, sheet_password='RSR123')
-
+            ws.unprotect_range(f'A{initial_index+1}:{last_column_letter}1000')
+            ws.protect('RSR123')
 
         pw = create_password()
         PassProtect(f'{path_xl_files}{file_name}', pw, f'{path_xl_files_password}{file_name}')
-        password_master.append((supp, pw))
+        password_master.append((supp, id_file, file_name, pw))
 
     
-    df_pw = pd.DataFrame(password_master, columns=['Supplier', 'Password'])
+    df_pw = pd.DataFrame(password_master, columns=['Supplier', 'File ID', 'Filename', 'Password'])
     sort_df_passwords(df_pw, today)
 
 
@@ -161,8 +168,14 @@ if __name__ == '__main__':
     project_name = 'BCOM'
     batch = 1
     excel_index_data = 4 # index where the data starts in the final template (not including the template config rows)
+    
+    today = datetime.today().strftime('%Y%m%d')
+    start(today)
 
-    start()
+    path_zip = f'{path}xl_files_password-{today}\\'
+    files = os.listdir(path_zip)
+    print(files)
 
+    shutil.make_archive(f'{project_name}-{today}', 'zip', path_zip)
     
    
