@@ -20,7 +20,9 @@ def compress(path, file_list, zip_filename, compression=False):
 
 if __name__ == '__main__':
 
-    path = 'C:\\Users\\giovanni.osorio\\Desktop\\python_proyects\\split_set_password\\xl_files_password-20220613\\'
+    # path_windows = 'C:\\Users\\giovanni.osorio\\Desktop\\python_proyects\\split_set_password\\xl_files_password-20220613\\'
+    
+    path = 'SIE1SEXL_files_pw_20221004'  ## folder containing xl files password protected
     files = os.listdir(path)
     print(files)
 

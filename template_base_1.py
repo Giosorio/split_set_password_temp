@@ -32,22 +32,6 @@ def PassProtect_win32(read_path, pw, new_path=None):
     xlApp.Quit()
 
 
-def create_password(supplier, random_pw=False):
-    """If random_pw is False is because there will be multiple batches and the password must remain the same"""
-    
-    if random_pw is True:
-        letters = string.ascii_uppercase + string.digits
-        random_6 =  ''.join(random.choice(letters) for _ in range(6))
-        password = project_name + random_6
-        
-        return password
-
-    supplier = ''.join(char for char in supplier if char.isalnum())
-    l = len(supplier)
-    pw = project_name + str(123 * l) + supplier[:3][::-1]  # supplier[:-4:-1]
-    return pw.upper()
-
-
 def check_encrypt_method():
 
     op_system = platform.system()
@@ -61,7 +45,7 @@ def check_encrypt_method():
         return 'win_32'
 
 
-def set_password(path_1, path_2, passwordMaster_name, set_password_method='msoffice-crypt'):
+def set_password(path_1, path_2, passwordMaster_name):
 
     def encrypt_file(password, path_in, path_out):
         """msoffice-crypt must be installed in the local folder"""
@@ -78,7 +62,7 @@ def set_password(path_1, path_2, passwordMaster_name, set_password_method='msoff
             return None
         
         if encrypt_method == 'win_32':
-            PassProtect_win32(f'{path_1}/{file_n}', pw, f'{path_2}/{file_n}')
+            PassProtect_win32(f'{path_1}\\{file_n}', pw, f'{path_2}\\{file_n}')
         
         if encrypt_method == 'msoffice-crypt':              
             path_in = '"{}/{}"'.format(path_1, file_n)
@@ -87,7 +71,23 @@ def set_password(path_1, path_2, passwordMaster_name, set_password_method='msoff
             print(file_n, '   Password:', pw, f'---->{count}/{num_files}')
             count +=1
     
+
+def create_password(supplier, random_pw=False):
+    """If random_pw is False is because there will be multiple batches and the password must remain the same"""
+    
+    if random_pw is True:
+        letters = string.ascii_uppercase + string.digits
+        random_6 =  ''.join(random.choice(letters) for _ in range(6))
+        password = project_name + random_6
         
+        return password
+
+    supplier = ''.join(char for char in supplier if char.isalnum())
+    l = len(supplier)
+    pw = project_name + str(123 * l) + supplier[:3][::-1]  # supplier[:-4:-1]
+    return pw.upper()
+
+
 def main():
 
     today = datetime.now().strftime('%Y%m%d')
@@ -141,10 +141,10 @@ def main():
         password_master.append((id_file, file_name, supp, pw))
 
     df_pw = pd.DataFrame(password_master, columns=['File ID', 'Filename', 'Supplier', 'Password'])
-    passwordMaster_name = f'PasswordMaster-{today}.csv'
+    passwordMaster_name = f'{project_name}-PasswordMaster-{today}.csv'
     df_pw.to_csv(passwordMaster_name, index=False)
 
-    set_password(path_1, path_2, passwordMaster_name, set_password_method)
+    set_password(path_1, path_2, passwordMaster_name)
     
 
 
