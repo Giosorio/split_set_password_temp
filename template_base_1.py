@@ -8,6 +8,7 @@ import string
 import random
 import platform
 from datetime import datetime
+import DataTypes 
 
 ######## WIN32 ONLY WORKS IN WINDOWS
 # import win32com.client as win32  ## pip install pywin32
@@ -88,22 +89,30 @@ def create_password(supplier, random_pw=False):
     return pw.upper()
 
 
-def main():
+def main(protect_files=True):
 
     today = datetime.now().strftime('%Y%m%d')
 
     path_1 = f'{project_name}_XL_files_{today}'
     path_2 = f'{project_name}XL_files_pw_{today}'
+    os.system(f'rm -r {path_1}')
     os.mkdir(path_1)
-    os.mkdir(path_2)
 
-    df = pd.read_excel(file, sheet_name='report', header=None)
-    header = df.iloc[1]
+    if protect_files is True:
+        os.system(f'rm -r {path_2}')
+        os.mkdir(path_2)
+
+    df = pd.read_excel(file, sheet_name='report', header=1)
+
+    special_cols_dict = {
+        'textpercent_to_number': [],
+        'date_string': ['Job Seeker Submit Date'],
+        'reduce_decimals': [],
+        'xlnumber_date': [],
+        'xlnumber_date_each': ['Please Provide the Date of Birth'],
+    }
     
-    df = df.iloc[2:, :]
-    df.columns = header
-
-
+    df = DataTypes.transform_special_columns(df, special_cols_dict)
     # df['Worker Date of Birth'] = pd.to_datetime(df['Worker Date of Birth'], format='%d/%m/%Y')
     # df['Worker Date of Birth'] = df['Worker Date of Birth'].dt.strftime('%d/%m/%Y')
 
@@ -131,30 +140,30 @@ def main():
             hd_format = wb.add_format({'text_wrap':True, 'bold':True})
 
             for i, col in enumerate(df.columns):
-                if i == 15:
-                    ws.set_column_pixels(i, i, width=400)
-                else:
-                    ws.set_column_pixels(i, i, width=150)
+                ws.set_column_pixels(i, i, width=150)
                 ws.write(0, i, col, hd_format)
 
-        pw = create_password(supp)    
-        password_master.append((id_file, file_name, supp, pw))
+        if protect_files is True:
+            pw = create_password(supp)    
+            password_master.append((id_file, file_name, supp, pw))
 
-    df_pw = pd.DataFrame(password_master, columns=['File ID', 'Filename', 'Supplier', 'Password'])
-    passwordMaster_name = f'{project_name}-PasswordMaster-{today}.csv'
-    df_pw.to_csv(passwordMaster_name, index=False)
 
-    set_password(path_1, path_2, passwordMaster_name)
+    if protect_files is True:
+        df_pw = pd.DataFrame(password_master, columns=['File ID', 'Filename', 'Supplier', 'Password'])
+        passwordMaster_name = f'{project_name}-PasswordMaster-{today}.csv'
+        df_pw.to_csv(passwordMaster_name, index=False)
+
+        set_password(path_1, path_2, passwordMaster_name)
     
 
 
 if __name__ == '__main__':
     
-    file = 'SIE1SE_Security ID_29092022.xlsx'
+    file = 'SIE1SE_Security ID_29092022 (date_number).xlsx'
 
     project_name = 'SIE1SE'
     batch = 1
     set_password_method = 'msoffice-crypt'    # 'msoffice-crypt' or 'win_32'
 
-    main()
+    main(protect_files=False)
 

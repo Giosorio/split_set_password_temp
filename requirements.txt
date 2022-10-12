@@ -1,0 +1,14 @@
+cffi==1.15.0
+cryptography==37.0.2
+et-xmlfile==1.1.0
+msoffcrypto-tool==5.0.0
+numpy==1.22.3
+olefile==0.46
+openpyxl==3.0.9
+pandas==1.4.2
+pycparser==2.21
+pyminizip==0.2.6
+python-dateutil==2.8.2
+pytz==2022.1
+six==1.16.0
+XlsxWriter==3.0.3
